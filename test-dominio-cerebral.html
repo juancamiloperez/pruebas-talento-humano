@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Test de Dominio Cerebral</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+.back{color:var(--muted);font-size:14px;text-decoration:none;align-self:flex-start}.back:hover{text-decoration:underline}
+[hidden]{display:none!important}
+body{margin:0}
+/* Layout: una columna centrada tipo "hoja de prueba"; cada pantalla (registro → preguntas → resultado) ocupa la misma tarjeta. Dos colores = dos hemisferios. */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#18212b; --muted:#5b6672; --line:#d9dfe5;
+  --izq:#1f5fa8; --izq-soft:#e3edf8; --der:#c2416b; --der-soft:#f9e4eb;
+  --focus:#1f5fa8;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#18202a; --ink:#e8edf2; --muted:#9aa6b2; --line:#2c3743;
+  --izq:#6ea8ec; --izq-soft:#1a2c42; --der:#ec7fa1; --der-soft:#3a1f2a; --focus:#6ea8ec; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#18202a; --ink:#e8edf2; --muted:#9aa6b2; --line:#2c3743;
+  --izq:#6ea8ec; --izq-soft:#1a2c42; --der:#ec7fa1; --der-soft:#3a1f2a; --focus:#6ea8ec; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;align-items:center;gap:14px}
+.mark{width:44px;height:44px;flex:none}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(20px,4vw,26px);line-height:1.2;margin:0;text-wrap:balance}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(20px,4vw,32px);display:flex;flex-direction:column;gap:18px}
+p{margin:0}
+.muted{color:var(--muted)}
+label{font-weight:700}
+input[type=text]{font:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input[type=text]:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px var(--izq-soft)}
+.field{display:flex;flex-direction:column;gap:8px}
+.err{color:var(--der);font-size:14px;min-height:1.2em}
+.btn{font:inherit;font-weight:700;cursor:pointer;border-radius:10px;padding:12px 20px;border:1.5px solid transparent;background:var(--ink);color:var(--surface);transition:transform .08s}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.steps{display:flex;flex-direction:column;gap:6px;margin:0;padding-left:20px;color:var(--muted)}
+/* progreso */
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-meta{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ink);width:0;transition:width .25s}
+.qnum{font-family:var(--display);font-weight:700;color:var(--muted);font-size:14px;letter-spacing:.08em}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{font:inherit;text-align:left;cursor:pointer;display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+.opt:hover{border-color:var(--muted)}
+.opt .k{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:1.5px solid var(--line);font-size:14px}
+.opt[aria-pressed="true"]{border-color:var(--ink);background:var(--bg)}
+.opt[aria-pressed="true"] .k{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.dots{display:flex;flex-wrap:wrap;gap:6px}
+.dot{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);font-size:11px;display:grid;place-items:center;cursor:pointer;background:var(--surface);color:var(--muted);font-family:var(--body);font-variant-numeric:tabular-nums;padding:0}
+.dot.done{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.dot.cur{outline:2px solid var(--focus);outline-offset:1px}
+/* resultado */
+.split{display:flex;height:44px;border-radius:10px;overflow:hidden;font-weight:700;font-variant-numeric:tabular-nums}
+.split>div{display:flex;align-items:center;padding:0 12px;min-width:0;white-space:nowrap}
+.split .l{background:var(--izq);color:var(--surface)}
+.split .r{background:var(--der);color:var(--surface);justify-content:flex-end}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.tile.l{background:var(--izq-soft)} .tile.r{background:var(--der-soft)}
+.tile b{font-family:var(--display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.tile.l b{color:var(--izq)} .tile.r b{color:var(--der)}
+.verdict{font-family:var(--display);font-weight:800;font-size:clamp(22px,4.5vw,30px);line-height:1.15}
+.traits{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.traits li{padding:5px 11px;border-radius:99px;font-size:14px;border:1px solid var(--line)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.n{font-variant-numeric:tabular-nums;color:var(--muted);width:2.5em}
+.tag{font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.tag.I{background:var(--izq-soft);color:var(--izq)} .tag.D{background:var(--der-soft);color:var(--der)}
+.note{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.status{font-size:14px;min-height:1.3em}
+details summary{cursor:pointer;font-weight:700}
+@media (max-width:420px){.tile b{font-size:28px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back" href="index.html">← Volver al inicio</a>
+  <header class="top">
+    <svg class="mark" viewBox="0 0 44 44" aria-hidden="true">
+      <path d="M21 6C12 6 6 13 6 22s6 16 15 16Z" fill="var(--izq)"/>
+      <path d="M23 6c9 0 15 7 15 16s-6 16-15 16Z" fill="var(--der)"/>
+    </svg>
+    <div>
+      <p class="eyebrow">Ejercicio de autoconocimiento · 20 preguntas</p>
+      <h1>Test de Dominio Cerebral</h1>
+    </div>
+  </header>
+
+  <!-- 1. Registro -->
+  <section class="card" id="vRegistro">
+    <h2>Antes de empezar</h2>
+    <p class="muted">Responde rápido, eligiendo la primera opción que te venga a la mente o la que te ocurra con más frecuencia. No hay respuestas correctas ni incorrectas.</p>
+    <form id="fNombre" class="field" novalidate>
+      <label for="nombre">Nombre completo</label>
+      <input type="text" id="nombre" autocomplete="name" placeholder="Ej.: María Fernanda López" maxlength="80">
+      <div class="err" id="errNombre" role="alert"></div>
+      <div class="row"><span class="muted" style="font-size:14px">Tiempo estimado: 3 a 5 minutos</span><button class="btn" type="submit">Comenzar el test</button></div>
+    </form>
+  </section>
+
+  <!-- 2. Preguntas -->
+  <section class="card" id="vTest" hidden>
+    <div class="prog">
+      <div class="prog-meta"><span id="who"></span><span id="cnt">0 de 20 respondidas</span></div>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+    <p class="qnum" id="qNum">PREGUNTA 1</p>
+    <h2 id="qText"></h2>
+    <div class="opts" id="opts"></div>
+    <div class="row">
+      <button class="btn ghost" id="bPrev" type="button">← Anterior</button>
+      <button class="btn" id="bNext" type="button">Siguiente →</button>
+    </div>
+    <div class="dots" id="dots" aria-label="Ir a una pregunta"></div>
+  </section>
+
+  <!-- 3. Resultado -->
+  <section class="card" id="vResultado" hidden>
+    <div>
+      <p class="eyebrow" id="rMeta"></p>
+      <h2 id="rNombre"></h2>
+    </div>
+    <p class="verdict" id="rVerdict"></p>
+    <div class="split" id="rSplit"></div>
+    <div class="tiles">
+      <div class="tile l"><span class="muted">Hemisferio izquierdo</span><b id="rI">0</b></div>
+      <div class="tile r"><span class="muted">Hemisferio derecho</span><b id="rD">0</b></div>
+    </div>
+    <p id="rText"></p>
+    <ul class="traits" id="rTraits"></ul>
+    <div class="row">
+      <button class="btn" id="bPdf" type="button">Descargar resultado (PDF)</button>
+      <button class="btn ghost" id="bNuevo" type="button">Nuevo estudiante</button>
+    </div>
+    <p class="status" id="pdfStatus" role="status"></p>
+    <details>
+      <summary>Ver mis respuestas</summary>
+      <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>#</th><th>Pregunta</th><th>Respuesta</th><th>Hemisferio</th></tr></thead><tbody id="rTabla"></tbody></table></div>
+    </details>
+    <p class="note">Criterio de calificación: preguntas 1 a 10, la opción (a) suma al hemisferio izquierdo y la (b) al derecho; preguntas 11 a 20, la (a) suma al derecho y la (b) al izquierdo. 12 o más respuestas hacia un lado indican dominio de ese hemisferio. Este resultado es orientativo y sirve para la reflexión en clase; no es un diagnóstico neurológico ni psicológico.</p>
+  </section>
+</div>
+
+<script>
+const Q=[
+ ["Tiendo a estar más frecuentemente:","tenso y preocupado","relajado y despreocupado"],
+ ["Cuando escucho música estoy más consciente:","del ritmo","de la melodía"],
+ ["Prefiero aprender:","escuchando y tomando notas","leyendo extensivamente y siguiendo corazonadas"],
+ ["Prefiero jugar:","scrabble","ajedrez o damas"],
+ ["Al ir de compras, con mayor frecuencia:","compro según lo que haya planificado","compro compulsivamente"],
+ ["Cuando aprendo algo nuevo:","lo entiendo paso a paso","de pronto comprendo todo junto"],
+ ["Tengo corazonadas:","rara vez","a menudo"],
+ ["Me cuesta poner mis sentimientos y opiniones en palabras:","rara vez","a menudo"],
+ ["Cuando salgo de viaje prefiero:","anotar las indicaciones para llegar","usar un mapa"],
+ ["Cuando elijo ropa prefiero:","estilo y colores relativamente sobrios","colores y estilo llamativos"],
+ ["Tiendo a recordar a la gente por sus:","caras","nombres"],
+ ["Considero que la ciencia:","nunca podrá explicar muchas cosas","eventualmente podrá explicar todo"],
+ ["Me gusta la gente que:","evalúa los pros y los contras","está segura de sus conclusiones"],
+ ["La gente suele verme como una persona:","imaginativa","confiable"],
+ ["Gran parte de lo más importante de la vida:","no puede expresarse en palabras","puede ser comunicado con palabras"],
+ ["Básicamente soy más:","cooperativo que competitivo","competitivo que cooperativo"],
+ ["Disfruto más:","estando solo con mis pensamientos","estando con otras personas"],
+ ["Prefiero:","ser espontáneo","hacer planes y horarios"],
+ ["Prefiero que mi casa y mi lugar de trabajo sean:","cómodos y desordenados","ordenados y bien organizados"],
+ ["Tiendo a juzgar:","por la primera impresión","luego de un cuidadoso análisis y deliberación"]
+];
+// Clave del test: 1–10 a=I b=D ; 11–20 a=D b=I
+const hemi=(i,op)=> i<10 ? (op==="a"?"I":"D") : (op==="a"?"D":"I");
+
+const TXT={
+ I:{v:"Predominio del hemisferio izquierdo",t:"Tus respuestas se inclinan hacia un estilo más analítico, secuencial y verbal: tiendes a planificar, a ordenar la información paso a paso y a decidir después de evaluar.",tr:["Analítico","Secuencial","Verbal","Planificado","Lógico","Detallista"]},
+ D:{v:"Predominio del hemisferio derecho",t:"Tus respuestas se inclinan hacia un estilo más intuitivo, global y visual: tiendes a captar el conjunto, a confiar en corazonadas y a actuar con espontaneidad.",tr:["Intuitivo","Global","Visual","Espontáneo","Creativo","Imaginativo"]},
+ E:{v:"Perfil equilibrado",t:"Ningún hemisferio alcanza 12 respuestas, así que tus preferencias combinan rasgos analíticos y secuenciales con rasgos intuitivos y globales según la situación.",tr:["Flexible","Analítico e intuitivo","Adaptable"]}
+};
+
+const $=id=>document.getElementById(id);
+let nombre="", ans=Array(20).fill(null), cur=0, lastResult=null;
+
+function show(v){["vRegistro","vTest","vResultado"].forEach(x=>$(x).hidden=(x!==v));window.scrollTo({top:0});}
+
+$("fNombre").addEventListener("submit",e=>{
+  e.preventDefault();
+  const n=$("nombre").value.trim().replace(/\s+/g," ");
+  if(n.length<3){$("errNombre").textContent="Escribe tu nombre (mínimo 3 caracteres) para poder iniciar.";$("nombre").focus();return;}
+  $("errNombre").textContent="";nombre=n;ans=Array(20).fill(null);cur=0;
+  $("who").textContent=nombre;show("vTest");render();
+});
+
+function render(){
+  const q=Q[cur];
+  $("qNum").textContent="PREGUNTA "+(cur+1)+" DE 20";
+  $("qText").textContent=q[0];
+  const o=$("opts");o.innerHTML="";
+  ["a","b"].forEach((k,j)=>{
+    const b=document.createElement("button");b.type="button";b.className="opt";
+    b.setAttribute("aria-pressed",ans[cur]===k?"true":"false");
+    b.innerHTML='<span class="k">'+k+'</span><span></span>';
+    b.lastChild.textContent=q[j+1];
+    b.onclick=()=>{ans[cur]=k;if(cur<19){cur++;render();}else render();};
+    o.appendChild(b);
+  });
+  const done=ans.filter(Boolean).length;
+  $("cnt").textContent=done+" de 20 respondidas";
+  $("barFill").style.width=(done/20*100)+"%";
+  $("bPrev").disabled=cur===0;
+  $("bNext").textContent=done===20?"Ver mi resultado":(cur===19?"Ir a la pendiente →":"Siguiente →");
+  $("bNext").disabled=false;
+  const d=$("dots");d.innerHTML="";
+  Q.forEach((_,i)=>{const x=document.createElement("button");x.type="button";x.className="dot"+(ans[i]?" done":"")+(i===cur?" cur":"");x.textContent=i+1;x.setAttribute("aria-label","Pregunta "+(i+1)+(ans[i]?" (respondida)":""));x.onclick=()=>{cur=i;render();};d.appendChild(x);});
+}
+$("bPrev").onclick=()=>{if(cur>0){cur--;render();}};
+$("bNext").onclick=()=>{
+  const done=ans.filter(Boolean).length;
+  if(done===20){results();return;}
+  if(cur<19){cur++;}else{cur=ans.findIndex(a=>!a);}
+  render();
+};
+document.addEventListener("keydown",e=>{
+  if($("vTest").hidden||e.target.tagName==="INPUT")return;
+  if(e.key==="a"||e.key==="A"){ans[cur]="a";if(cur<19)cur++;render();}
+  else if(e.key==="b"||e.key==="B"){ans[cur]="b";if(cur<19)cur++;render();}
+});
+
+function compute(){
+  let I=0,D=0;const rows=ans.map((a,i)=>{const h=hemi(i,a);h==="I"?I++:D++;return {i,a,h};});
+  const tipo=I>=12?"I":D>=12?"D":"E";
+  return {I,D,tipo,rows,fecha:new Date()};
+}
+function fmtFecha(d){return d.toLocaleDateString("es-CO",{day:"2-digit",month:"long",year:"numeric"})+" · "+d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
+
+function results(){
+  const r=compute();lastResult=r;const T=TXT[r.tipo];
+  $("rMeta").textContent="Resultado · "+fmtFecha(r.fecha);
+  $("rNombre").textContent=nombre;
+  $("rVerdict").textContent=T.v;
+  $("rVerdict").style.color=r.tipo==="I"?"var(--izq)":r.tipo==="D"?"var(--der)":"var(--ink)";
+  $("rI").textContent=r.I;$("rD").textContent=r.D;
+  $("rSplit").innerHTML='<div class="l" style="width:'+(r.I/20*100)+'%">'+(r.I?r.I+' Izq.':'')+'</div><div class="r" style="width:'+(r.D/20*100)+'%">'+(r.D?r.D+' Der.':'')+'</div>';
+  $("rText").textContent=T.t;
+  $("rTraits").innerHTML="";T.tr.forEach(t=>{const li=document.createElement("li");li.textContent=t;$("rTraits").appendChild(li);});
+  const tb=$("rTabla");tb.innerHTML="";
+  r.rows.forEach(x=>{const tr=document.createElement("tr");
+    tr.innerHTML='<td class="n">'+(x.i+1)+'</td><td></td><td></td><td><span class="tag '+x.h+'">'+(x.h==="I"?"Izquierdo":"Derecho")+'</span></td>';
+    tr.children[1].textContent=Q[x.i][0];tr.children[2].textContent="("+x.a+") "+Q[x.i][x.a==="a"?1:2];tb.appendChild(tr);});
+  $("pdfStatus").textContent="";
+  show("vResultado");
+}
+
+$("bNuevo").onclick=()=>{nombre="";ans=Array(20).fill(null);cur=0;$("nombre").value="";show("vRegistro");$("nombre").focus();};
+
+function buildPdf(r){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});
+  const W=210,M=18;let y=20;const T=TXT[r.tipo];
+  const AZ=[31,95,168],RO=[194,65,107],TX=[24,33,43],MU=[91,102,114];
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(...TX);doc.text("Test de Dominio Cerebral",M,y);
+  y+=7;doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(...MU);doc.text("Resultado individual · "+fmtFecha(r.fecha),M,y);
+  y+=10;doc.setDrawColor(217,223,229);doc.line(M,y,W-M,y);
+  y+=9;doc.setFontSize(10);doc.text("Estudiante",M,y);
+  y+=6;doc.setFont("helvetica","bold");doc.setFontSize(14);doc.setTextColor(...TX);doc.text(doc.splitTextToSize(nombre,W-2*M),M,y);
+  y+=12;doc.setFontSize(15);doc.setTextColor(...(r.tipo==="I"?AZ:r.tipo==="D"?RO:TX));doc.text(T.v,M,y);
+  y+=8;const bw=W-2*M,wl=bw*r.I/20;
+  doc.setFillColor(...AZ);if(r.I)doc.rect(M,y,wl,10,"F");doc.setFillColor(...RO);if(r.D)doc.rect(M+wl,y,bw-wl,10,"F");
+  doc.setTextColor(255,255,255);doc.setFontSize(10);
+  if(r.I)doc.text("Izquierdo: "+r.I,M+3,y+6.5);if(r.D)doc.text("Derecho: "+r.D,W-M-3,y+6.5,{align:"right"});
+  y+=18;doc.setFont("helvetica","normal");doc.setFontSize(11);doc.setTextColor(...TX);
+  const lines=doc.splitTextToSize(T.t,bw);doc.text(lines,M,y);y+=lines.length*5.2+2;
+  doc.setTextColor(...MU);doc.setFontSize(10);doc.text("Rasgos asociados: "+T.tr.join(", "),M,y);
+  y+=10;doc.setFont("helvetica","bold");doc.setTextColor(...TX);doc.setFontSize(11);doc.text("Respuestas",M,y);
+  y+=6;doc.setFontSize(8.5);
+  r.rows.forEach(x=>{
+    const pq=doc.splitTextToSize((x.i+1)+". "+Q[x.i][0],88);
+    const pr=doc.splitTextToSize("("+x.a+") "+Q[x.i][x.a==="a"?1:2],60);
+    const h=Math.max(pq.length,pr.length)*3.8+1.6;
+    if(y+h>282){doc.addPage();y=20;}
+    doc.setFont("helvetica","normal");doc.setTextColor(...TX);doc.text(pq,M,y);doc.text(pr,M+92,y);
+    doc.setFont("helvetica","bold");doc.setTextColor(...(x.h==="I"?AZ:RO));doc.text(x.h==="I"?"Izquierdo":"Derecho",W-M,y,{align:"right"});
+    y+=h;
+  });
+  y+=4;if(y>270){doc.addPage();y=20;}
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(...MU);
+  const nota=doc.splitTextToSize("Criterio: preguntas 1-10, (a) = izquierdo y (b) = derecho; preguntas 11-20, (a) = derecho y (b) = izquierdo. 12 o más respuestas indican dominio de un hemisferio. Resultado orientativo para la reflexión en clase; no es un diagnóstico neurológico ni psicológico.",bw);
+  doc.text(nota,M,y);
+  return doc.output("arraybuffer");
+}
+function slug(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,60)||"estudiante";}
+
+let downloads={save:async({filename,data})=>{
+  const blob=new Blob([data],{type:"application/pdf"});const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);return {status:"saved"};}};
+
+$("bPdf").onclick=async()=>{
+  if(!lastResult)return;
+  if(!downloads){$("pdfStatus").textContent="La descarga no está disponible en esta vista.";return;}
+  if(!window.jspdf){$("pdfStatus").textContent="No se pudo cargar el generador de PDF. Recarga la página e inténtalo de nuevo.";return;}
+  $("bPdf").disabled=true;$("pdfStatus").textContent="Preparando el PDF…";
+  try{
+    const buf=buildPdf(lastResult);
+    await downloads.save({filename:"Resultado_Dominio_Cerebral_"+slug(nombre)+".pdf",data:buf});
+    $("pdfStatus").textContent="PDF descargado. Revisa tu carpeta de descargas.";
+  }catch(e){
+    const c=e&&e.code;
+    $("pdfStatus").textContent=c==="declined"?"Cancelaste la descarga. Puedes intentarlo de nuevo cuando quieras.":c==="rate_limited"?"Ya hay una descarga pendiente de confirmar.":"No se pudo descargar el archivo en esta vista.";
+  }finally{$("bPdf").disabled=!downloads;}
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prueba de Perfil DISC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+.back{color:var(--muted);font-size:14px;text-decoration:none;align-self:flex-start}.back:hover{text-decoration:underline}
+[hidden]{display:none!important}
+body{margin:0}
+/* Layout: una columna tipo "cuadernillo"; registro → 25 bloques de ordenamiento → perfil. Cuatro colores = cuatro factores DISC. */
+:root{
+  --bg:#f4f4f1; --surface:#ffffff; --ink:#1b1f24; --muted:#5d636b; --line:#dcdcd6;
+  --d:#c8372d; --i:#b88400; --s:#2e8a4f; --c:#2a64b4;
+  --d-soft:#f8e3e0; --i-soft:#f7edd2; --s-soft:#dff0e4; --c-soft:#e0eaf7;
+  --focus:#2a64b4;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111315; --surface:#1a1d21; --ink:#eceef0; --muted:#9ba1a8; --line:#2f343a;
+  --d:#ef6b5f; --i:#e8b53d; --s:#5cc282; --c:#6fa2ec;
+  --d-soft:#3b201d; --i-soft:#372d14; --s-soft:#1b3324; --c-soft:#1b2a40; --focus:#6fa2ec; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111315; --surface:#1a1d21; --ink:#eceef0; --muted:#9ba1a8; --line:#2f343a;
+  --d:#ef6b5f; --i:#e8b53d; --s:#5cc282; --c:#6fa2ec;
+  --d-soft:#3b201d; --i-soft:#372d14; --s-soft:#1b3324; --c-soft:#1b2a40; --focus:#6fa2ec; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;align-items:center;gap:14px}
+.mark{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:44px;height:44px;flex:none}
+.mark span{border-radius:5px;display:grid;place-items:center;color:#fff;font:700 12px var(--display)}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,36px);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(20px,4vw,26px);line-height:1.2;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;font-size:17px;margin:0}
+p{margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(20px,4vw,32px);display:flex;flex-direction:column;gap:18px}
+.muted{color:var(--muted)}
+label{font-weight:700}
+input[type=text]{font:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input[type=text]:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px var(--c-soft)}
+.field{display:flex;flex-direction:column;gap:8px}
+.err{color:var(--d);font-size:14px;min-height:1.2em}
+.btn{font:inherit;font-weight:700;cursor:pointer;border-radius:10px;padding:12px 20px;border:1.5px solid transparent;background:var(--ink);color:var(--surface)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.small{padding:7px 12px;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.opt:focus-visible,.dot:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.how{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:start;margin:0;padding:14px 16px;background:var(--bg);border-radius:12px;font-size:15px}
+.how b.n{font-family:var(--display);font-size:18px;line-height:1.3}
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-meta{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prog-meta span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ink);width:0;transition:width .25s}
+.qnum{font-family:var(--display);font-weight:700;color:var(--muted);font-size:14px;letter-spacing:.08em;margin:0}
+.hint{font-size:14px;color:var(--muted)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{font:inherit;text-align:left;cursor:pointer;display:flex;gap:14px;align-items:center;padding:14px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);min-height:56px}
+.opt:hover{border-color:var(--muted)}
+.opt .k{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font:700 16px var(--display);border:1.5px dashed var(--line);color:var(--muted);font-variant-numeric:tabular-nums}
+.opt .lab{flex:1;min-width:0}
+.opt .tagr{font-size:12px;color:var(--muted);white-space:nowrap}
+.opt.ranked{border-color:var(--ink)}
+.opt.ranked .k{border-style:solid;background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.opt.r1 .k{background:transparent;color:var(--ink)}
+.dots{display:flex;flex-wrap:wrap;gap:6px}
+.dot{width:28px;height:28px;border-radius:7px;border:1px solid var(--line);font-size:11px;display:grid;place-items:center;cursor:pointer;background:var(--surface);color:var(--muted);font-family:var(--body);font-variant-numeric:tabular-nums;padding:0}
+.dot.done{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.dot.cur{outline:2px solid var(--focus);outline-offset:1px}
+/* resultado */
+.verdict{display:flex;gap:14px;align-items:center}
+.badge{flex:none;width:64px;height:64px;border-radius:14px;display:grid;place-items:center;color:#fff;font:800 30px var(--display)}
+.verdict-t{font-family:var(--display);font-weight:800;font-size:clamp(22px,4.5vw,30px);line-height:1.15}
+.chart{display:flex;flex-direction:column;gap:12px}
+.crow{display:grid;grid-template-columns:116px 1fr 44px;gap:10px;align-items:center}
+.crow .nm{font-weight:700;font-size:15px}
+.track{position:relative;height:22px;background:var(--bg);border-radius:6px;overflow:hidden}
+.track>i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.track .mid{position:absolute;top:-2px;bottom:-2px;width:0;border-left:1.5px dashed var(--muted);opacity:.6}
+.crow .v{font:700 18px var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.axis{display:grid;grid-template-columns:116px 1fr 44px;gap:10px;font-size:12px;color:var(--muted)}
+.axis div{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.chips li{padding:5px 11px;border-radius:99px;font-size:14px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.status{font-size:14px;min-height:1.3em}
+details summary{cursor:pointer;font-weight:700}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}.crow,.axis{grid-template-columns:92px 1fr 36px}.crow .nm{font-size:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back" href="index.html">← Volver al inicio</a>
+  <header class="top">
+    <div class="mark" aria-hidden="true"><span style="background:var(--d)">D</span><span style="background:var(--i)">I</span><span style="background:var(--s)">S</span><span style="background:var(--c)">C</span></div>
+    <div>
+      <p class="eyebrow">Autoevaluación de estilo de comportamiento · 25 bloques</p>
+      <h1>Prueba de Perfil DISC</h1>
+    </div>
+  </header>
+
+  <!-- 1. Registro -->
+  <section class="card" id="vRegistro">
+    <h2>Antes de empezar</h2>
+    <p class="muted">Vas a ver 25 bloques con cuatro frases cada uno. En cada bloque ordena las frases según qué tanto te describen. No hay respuestas buenas ni malas: responde pensando en cómo actúas normalmente, no en cómo te gustaría actuar.</p>
+    <div class="how">
+      <b class="n">4</b><span>Toca primero la frase que <strong>más</strong> te identifica.</span>
+      <b class="n">3·2</b><span>Sigue tocando en orden de más a menos.</span>
+      <b class="n">1</b><span>La última frase queda como la que <strong>menos</strong> te identifica. Puedes tocar una frase ya numerada para corregir.</span>
+    </div>
+    <form id="fNombre" class="field" novalidate>
+      <label for="nombre">Nombre completo</label>
+      <input type="text" id="nombre" autocomplete="name" placeholder="Ej.: Andrés Felipe Gómez" maxlength="80">
+      <div class="err" id="errNombre" role="alert"></div>
+      <div class="row"><span class="muted" style="font-size:14px">Tiempo estimado: 8 a 12 minutos</span><button class="btn" type="submit">Comenzar la prueba</button></div>
+    </form>
+  </section>
+
+  <!-- 2. Bloques -->
+  <section class="card" id="vTest" hidden>
+    <div class="prog">
+      <div class="prog-meta"><span id="who"></span><span id="cnt">0 de 25 bloques</span></div>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+    <p class="qnum" id="qNum">BLOQUE 1 DE 25</p>
+    <h2 id="qText"></h2>
+    <p class="hint" id="hint"></p>
+    <div class="opts" id="opts"></div>
+    <div class="row">
+      <button class="btn ghost" id="bPrev" type="button">← Anterior</button>
+      <button class="btn ghost small" id="bReset" type="button">Borrar este bloque</button>
+      <button class="btn" id="bNext" type="button">Siguiente →</button>
+    </div>
+    <div class="dots" id="dots" aria-label="Ir a un bloque"></div>
+  </section>
+
+  <!-- 3. Resultado -->
+  <section class="card" id="vResultado" hidden>
+    <div>
+      <p class="eyebrow" id="rMeta"></p>
+      <h2 id="rNombre"></h2>
+    </div>
+    <div class="verdict"><div class="badge" id="rBadge">D</div><div><p class="muted" style="font-size:14px">Perfil predominante</p><p class="verdict-t" id="rVerdict"></p><p class="muted" id="rSecond" style="font-size:15px"></p></div></div>
+    <div class="chart" id="rChart"></div>
+    <div class="axis"><span></span><div><span>25 mín.</span><span>62,5 punto medio</span><span>100 máx.</span></div><span></span></div>
+    <p id="rText"></p>
+    <ul class="chips" id="rChips"></ul>
+    <div class="grid2">
+      <div class="box"><h3>Aporte al equipo</h3><ul id="rTeam"></ul></div>
+      <div class="box"><h3>Ambiente ideal</h3><ul id="rEnv"></ul></div>
+      <div class="box"><h3>Bajo presión puede ser</h3><ul id="rPress"></ul></div>
+      <div class="box"><h3>Aspectos a vigilar</h3><ul id="rLim"></ul></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="bPdf" type="button">Descargar resultado (PDF)</button>
+      <button class="btn ghost" id="bNuevo" type="button">Nuevo estudiante</button>
+    </div>
+    <p class="status" id="pdfStatus" role="status"></p>
+    <details>
+      <summary>Ver mis respuestas por bloque</summary>
+      <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>#</th><th>Bloque</th><th>Más me identifica (4)</th><th>Menos me identifica (1)</th></tr></thead><tbody id="rTabla"></tbody></table></div>
+    </details>
+    <p class="note">Cómo se calcula: en cada bloque una frase corresponde a cada factor (Dominancia, Influencia, Estabilidad, Cumplimiento). El puntaje de cada factor es la suma de los números que le asignaste en los 25 bloques, así que va de 25 a 100 y los cuatro suman siempre 250. El perfil predominante es el factor con mayor puntaje. Es una autoevaluación orientativa para la reflexión en clase, no un diagnóstico psicológico ni una prueba DISC certificada.</p>
+  </section>
+</div>
+
+<script>
+// Bloques: opciones en orden [D, I, S, C], igual que la hoja "Auto" del Excel
+const B=[
+ ["Tiende a actuar de una manera ...",["afirmativa","persuasiva","paciente","contemplativa"]],
+ ["Se siente cómodo con ...",["ser decisivo","las amistades sociales","ser parte de un equipo","la planificación y el orden"]],
+ ["Tiene deseo de ...",["variedad","menos estructura","armonía","lógica"]],
+ ["En situaciones de estrés puede llegar a ser ...",["dictatorial","sarcástico","sumiso","retraído"]],
+ ["Su característica principal es ser ...",["franco","optimista","servicial","ordenado"]],
+ ["En un conflicto, usted ...",["exige acción","ataca","se queja","evita"]],
+ ["Su fortaleza aparente es ser ...",["solucionador de problemas","alentador","solidario","organizador"]],
+ ["Ante los errores, usted ...",["informa del error directamente","llama a la persona y le explica el error","guarda silencio y acepta el error","corrige el error usted mismo"]],
+ ["En situaciones de estrés puede llegar a ser ...",["crítico","superficial","indeciso","terco"]],
+ ["Lo pueden considerar ...",["impaciente","inoportuno","indeciso","inseguro"]],
+ ["Tiene necesidad de ...",["control","aprobación","rutina","estándares"]],
+ ["Una limitación de su perfil es ser ...",["demasiado directo","desorganizado","indirecto","demasiado minucioso"]],
+ ["Tiene miedo a ...",["perder","el rechazo","los cambios repentinos","estar equivocado"]],
+ ["Mide su desempeño por ...",["los resultados","el reconocimiento","la compatibilidad con los demás","la precisión"]],
+ ["Con los subordinados, a menudo es ...",["orgulloso","permisivo","humilde","cauteloso"]],
+ ["Su enfoque principal es ...",["independiente","interactivo","estable","correctivo"]],
+ ["Otra limitación de su perfil es ser ...",["intenso","poco tradicional","indeciso","impersonal"]],
+ ["Su punto ciego es ...",["la culpa","asumir compromisos","la necesidad de cambio","la toma de decisiones"]],
+ ["También mide su desempeño por ...",["el historial de logros","las felicitaciones","la contribución","la calidad de los resultados"]],
+ ["Prefiere tareas ...",["desafiantes","relacionadas con las personas","programadas","estructuradas"]],
+ ["Ante los retrasos, usted ...",["se enoja y confronta","no le da importancia y se distrae","le molesta el retraso, pero lo acepta","se queja y analiza la situación"]],
+ ["En situaciones extremas, usted ...",["se obsesiona con los objetivos","habla sin pensar","pospone las cosas en vez de hacerlas","analiza demasiado"]],
+ ["Necesita mejorar ...",["la empatía y la paciencia","el control emocional","la firmeza bajo presión","preocuparse menos por todo"]],
+ ["En una discusión, usted ...",["busca tener la razón","busca reducir los conflictos","busca un acuerdo","busca demostrar su opinión con argumentos"]],
+ ["Cuando va de compras, usted ...",["sabe lo que quiere","se divierte","es indeciso","investiga y compara"]]
+];
+const F=["D","I","S","C"];
+// Contenido de las hojas de conocimiento D, I, S y C del Excel (redacción corregida)
+const P={
+ D:{n:"Dominancia",col:"--d",soft:"--d-soft",rgb:[200,55,45],
+  t:"Tus respuestas muestran un estilo directo y orientado a resultados. Tiendes a tomar la iniciativa, decidir rápido y enfrentar los retos de frente.",
+  pos:["Con iniciativa","Competitivo","Determinado","Directo","Responsable","Centrado en resultados","Líder","Persistente","Resuelve problemas"],
+  team:["Coordinador","Innovador","Previsor","Toma la iniciativa","Enfrenta los desafíos"],
+  env:["Debates para expresar puntos de vista","Libertad de control y supervisión","Trabajo con desafíos y oportunidades","Entorno innovador y sin rutina"],
+  press:["Exigente","Nervioso","Agresivo","Egocéntrico"],
+  lim:["Falta de tacto y diplomacia","Habla sin pensar","Impaciencia","Le cuesta escuchar y recibir retroalimentación","Dificultad para delegar","Asume demasiados riesgos"]},
+ I:{n:"Influencia",col:"--i",soft:"--i-soft",rgb:[184,132,0],
+  t:"Tus respuestas muestran un estilo sociable y entusiasta. Tiendes a comunicarte con facilidad, motivar a otros y buscar el contacto con las personas.",
+  pos:["Atento","Buen humor","Cálido","Confiado","Convincente","Entusiasta","Motivador","Optimista","Sociable"],
+  team:["Creativo para resolver conflictos","Juega en equipo","Motiva a otros hacia sus objetivos","Negocia conflictos","Optimista y entusiasta"],
+  env:["Contacto constante con las personas","Espacios para escuchar y debatir ideas","Libertad de movimiento","Libre de control y de detalle excesivo"],
+  press:["Habla en exceso","Demasiado optimista","Poco realista","Se autopromociona"],
+  lim:["Falta de atención a los detalles","Pierde el foco con facilidad","Problemas con el manejo del tiempo","Dificultad para terminar tareas","Confía en la gente sin distinción","Desorganización"]},
+ S:{n:"Estabilidad",col:"--s",soft:"--s-soft",rgb:[46,138,79],
+  t:"Tus respuestas muestran un estilo paciente y cooperativo. Tiendes a valorar la armonía, la constancia y las relaciones de largo plazo.",
+  pos:["Amable","Amistoso","Conciliador","Calmado","Comprensivo","Confiable","Leal","Paciente","Sabe escuchar"],
+  team:["Juega en equipo","Análisis lógico","Orientado al servicio","Paciente y constante","Comprometido con un líder y una causa"],
+  env:["Entorno estable y predecible","Pocos conflictos entre personas","Relaciones de trabajo a largo plazo","Cambios graduales y anunciados"],
+  press:["Despreocupado","Indeciso","Inflexible","Reservado"],
+  lim:["Cede para evitar la controversia","Asume muy pocos riesgos","Dificultad para fijar prioridades","Le incomodan los cambios bruscos","Falta de iniciativa","Demasiado indulgente"]},
+ C:{n:"Cumplimiento",col:"--c",soft:"--c-soft",rgb:[42,100,180],
+  t:"Tus respuestas muestran un estilo analítico y cuidadoso. Tiendes a buscar la precisión, seguir estándares altos de calidad y decidir con base en datos.",
+  pos:["Alto nivel de calidad","Analítico","Cuidadoso","Diplomático","Exacto","Hace buenas preguntas","Firme","Objetivo","Preciso"],
+  team:["Integral, resuelve problemas","Consciente y coherente","Define, aclara y verifica la información","Mantiene un alto estándar","Objetivo y anclado en la realidad"],
+  env:["Entorno de trabajo familiar","Rol técnico o especializado","Espacio de trabajo propio","Relación cercana con un grupo pequeño"],
+  press:["Difícil de complacer","Meticuloso en exceso","Muy crítico","Pesimista"],
+  lim:["Defensivo ante la crítica","Asume pocos riesgos","Se aferra a los detalles","Exige demasiados datos para decidir","Puede parecer distante y frío","Lento para actuar"]}
+};
+
+const $=id=>document.getElementById(id);
+let nombre="",cur=0,lastResult=null;
+let order=[];   // order[b] = índices (0..3) en el orden en que el estudiante los tocó (1º = 4 puntos)
+let perm=[];    // orden de presentación aleatorio por bloque
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rankOf(b,idx){const p=order[b].indexOf(idx);return p<0?null:4-p;}
+function complete(b){return order[b].length===4;}
+function doneCount(){return order.filter(o=>o.length===4).length;}
+function show(v){["vRegistro","vTest","vResultado"].forEach(x=>$(x).hidden=(x!==v));window.scrollTo({top:0});}
+
+$("fNombre").addEventListener("submit",e=>{
+  e.preventDefault();
+  const n=$("nombre").value.trim().replace(/\s+/g," ");
+  if(n.length<3){$("errNombre").textContent="Escribe tu nombre (mínimo 3 caracteres) para poder iniciar.";$("nombre").focus();return;}
+  $("errNombre").textContent="";nombre=n;cur=0;
+  order=B.map(()=>[]);perm=B.map(()=>shuffle([0,1,2,3]));
+  $("who").textContent=nombre;show("vTest");render();
+});
+
+function tap(idx){
+  const o=order[cur];const p=o.indexOf(idx);
+  if(p>=0){o.splice(p);}           // corregir: quita esa frase y las posteriores
+  else{o.push(idx);if(o.length===3){o.push([0,1,2,3].find(x=>!o.includes(x)));}}
+  render();
+  if(complete(cur)&&cur<24){setTimeout(()=>{if(complete(cur)&&cur<24){cur++;render();}},450);}
+}
+
+function render(){
+  const [q,opts]=B[cur];
+  $("qNum").textContent="BLOQUE "+(cur+1)+" DE 25";
+  $("qText").textContent=q;
+  const n=order[cur].length;
+  $("hint").textContent=n===0?"Toca la frase que MÁS te identifica.":n<4?"Ahora toca la siguiente que más te identifica.":"Bloque completo. Toca una frase numerada si quieres corregir.";
+  const box=$("opts");box.innerHTML="";
+  perm[cur].forEach(idx=>{
+    const r=rankOf(cur,idx);
+    const b=document.createElement("button");b.type="button";b.className="opt"+(r?" ranked r"+r:"");
+    b.setAttribute("aria-label",opts[idx]+(r?", posición "+r:", sin asignar"));
+    b.innerHTML='<span class="k">'+(r||"·")+'</span><span class="lab"></span><span class="tagr">'+(r===4?"más me identifica":r===1?"menos me identifica":"")+'</span>';
+    b.querySelector(".lab").textContent=opts[idx];
+    b.onclick=()=>tap(idx);box.appendChild(b);
+  });
+  const d=doneCount();
+  $("cnt").textContent=d+" de 25 bloques";
+  $("barFill").style.width=(d/25*100)+"%";
+  $("bPrev").disabled=cur===0;
+  $("bReset").disabled=n===0;
+  $("bNext").textContent=d===25?"Ver mi resultado":(cur===24?"Ir al pendiente →":"Siguiente →");
+  const dots=$("dots");dots.innerHTML="";
+  B.forEach((_,i)=>{const x=document.createElement("button");x.type="button";x.className="dot"+(complete(i)?" done":"")+(i===cur?" cur":"");x.textContent=i+1;x.setAttribute("aria-label","Bloque "+(i+1)+(complete(i)?" (completo)":""));x.onclick=()=>{cur=i;render();};dots.appendChild(x);});
+}
+$("bPrev").onclick=()=>{if(cur>0){cur--;render();}};
+$("bReset").onclick=()=>{order[cur]=[];render();};
+$("bNext").onclick=()=>{
+  if(doneCount()===25){results();return;}
+  if(cur<24)cur++;else cur=order.findIndex(o=>o.length<4);
+  render();
+};
+
+function compute(){
+  const s={D:0,I:0,S:0,C:0};
+  B.forEach((_,b)=>F.forEach((f,idx)=>{s[f]+=rankOf(b,idx);}));
+  const sorted=F.slice().sort((a,b)=>s[b]-s[a]);
+  const top=sorted.filter(f=>s[f]===s[sorted[0]]);
+  const rest=sorted.filter(f=>!top.includes(f));
+  return {s,top,second:rest[0]||null,fecha:new Date()};
+}
+function fmtFecha(d){return d.toLocaleDateString("es-CO",{day:"2-digit",month:"long",year:"numeric"})+" · "+d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
+const pct=v=>(v-25)/75*100;
+function fillList(id,arr){const u=$(id);u.innerHTML="";arr.forEach(t=>{const li=document.createElement("li");li.textContent=t;u.appendChild(li);});}
+
+function results(){
+  const r=compute();lastResult=r;const m=r.top[0];const Pm=P[m];
+  $("rMeta").textContent="Resultado · "+fmtFecha(r.fecha);
+  $("rNombre").textContent=nombre;
+  $("rBadge").textContent=r.top.join("");$("rBadge").style.background="var("+Pm.col+")";
+  $("rVerdict").textContent=r.top.map(f=>P[f].n).join(" y ")+(r.top.length>1?" (empate)":"");
+  $("rVerdict").style.color="var("+Pm.col+")";
+  $("rSecond").textContent=r.second&&r.top.length===1?"Factor secundario: "+P[r.second].n+" ("+r.s[r.second]+" puntos)":"";
+  const ch=$("rChart");ch.innerHTML="";
+  F.forEach(f=>{const row=document.createElement("div");row.className="crow";
+    row.innerHTML='<span class="nm" style="color:var('+P[f].col+')">'+f+' · '+P[f].n+'</span><div class="track"><i style="width:'+Math.max(pct(r.s[f]),1.5)+'%;background:var('+P[f].col+')"></i><span class="mid" style="left:50%"></span></div><span class="v">'+r.s[f]+'</span>';
+    ch.appendChild(row);});
+  $("rText").textContent=r.top.length>1?"Tienes el mismo puntaje en "+r.top.map(f=>P[f].n).join(" y ")+", así que tu estilo combina rasgos de ambos. Abajo se describe "+Pm.n+"; revisa también la descripción del otro factor con tu docente.":Pm.t;
+  const chips=$("rChips");chips.innerHTML="";
+  Pm.pos.forEach(t=>{const li=document.createElement("li");li.textContent=t;li.style.background="var("+Pm.soft+")";chips.appendChild(li);});
+  fillList("rTeam",Pm.team);fillList("rEnv",Pm.env);fillList("rPress",Pm.press);fillList("rLim",Pm.lim);
+  const tb=$("rTabla");tb.innerHTML="";
+  B.forEach(([q,o],b)=>{const tr=document.createElement("tr");
+    const mas=order[b][0],menos=order[b][3];
+    tr.innerHTML='<td class="n">'+(b+1)+'</td><td></td><td></td><td></td>';
+    tr.children[1].textContent=q;tr.children[2].textContent=o[mas]+" ("+F[mas]+")";tr.children[3].textContent=o[menos]+" ("+F[menos]+")";tb.appendChild(tr);});
+  $("pdfStatus").textContent="";
+  show("vResultado");
+}
+$("bNuevo").onclick=()=>{nombre="";cur=0;order=[];lastResult=null;$("nombre").value="";show("vRegistro");$("nombre").focus();};
+
+function buildPdf(r){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});
+  const W=210,M=18,bw=W-2*M;let y=20;const m=r.top[0],Pm=P[m];
+  const TX=[27,31,36],MU=[93,99,107],LN=[220,220,214];
+  const need=h=>{if(y+h>282){doc.addPage();y=20;}};
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(...TX);doc.text("Prueba de Perfil DISC",M,y);
+  y+=7;doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(...MU);doc.text("Resultado individual (autoevaluación) · "+fmtFecha(r.fecha),M,y);
+  y+=6;doc.setDrawColor(...LN);doc.line(M,y,W-M,y);
+  y+=8;doc.text("Estudiante",M,y);y+=6;doc.setFont("helvetica","bold");doc.setFontSize(14);doc.setTextColor(...TX);doc.text(doc.splitTextToSize(nombre,bw),M,y);
+  y+=11;doc.setFontSize(10);doc.setFont("helvetica","normal");doc.setTextColor(...MU);doc.text("Perfil predominante",M,y);
+  y+=7;doc.setFont("helvetica","bold");doc.setFontSize(16);doc.setTextColor(...Pm.rgb);
+  doc.text(r.top.join("")+" · "+r.top.map(f=>P[f].n).join(" y ")+(r.top.length>1?" (empate)":""),M,y);
+  if(r.second&&r.top.length===1){y+=6;doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(...MU);doc.text("Factor secundario: "+P[r.second].n+" ("+r.s[r.second]+" puntos)",M,y);}
+  y+=9;
+  const lw=34,tw=bw-lw-14;
+  F.forEach(f=>{
+    doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...P[f].rgb);doc.text(f+" · "+P[f].n,M,y+4.2);
+    doc.setFillColor(240,240,236);doc.rect(M+lw,y,tw,6,"F");
+    doc.setFillColor(...P[f].rgb);doc.rect(M+lw,y,Math.max(tw*pct(r.s[f])/100,0.8),6,"F");
+    doc.setDrawColor(...MU);doc.setLineDashPattern([1,1],0);doc.line(M+lw+tw/2,y-1,M+lw+tw/2,y+7);doc.setLineDashPattern([],0);
+    doc.setTextColor(...TX);doc.text(String(r.s[f]),W-M,y+4.6,{align:"right"});
+    y+=9;
+  });
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(...MU);
+  doc.text("Escala de 25 (mínimo) a 100 (máximo); línea punteada = 62,5. Los cuatro factores suman 250.",M+lw,y);
+  y+=8;doc.setFontSize(11);doc.setTextColor(...TX);
+  const t=r.top.length>1?"Tienes el mismo puntaje en "+r.top.map(f=>P[f].n).join(" y ")+", así que tu estilo combina rasgos de ambos. Se describe "+Pm.n+".":Pm.t;
+  let L=doc.splitTextToSize(t,bw);doc.text(L,M,y);y+=L.length*5+3;
+  doc.setFontSize(10);doc.setTextColor(...MU);L=doc.splitTextToSize("Rasgos positivos: "+Pm.pos.join(", ")+".",bw);doc.text(L,M,y);y+=L.length*4.6+4;
+  const sec=(tit,arr,x,yy,w)=>{doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...TX);doc.text(tit,x,yy);yy+=5;doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...TX);
+    arr.forEach(a=>{const l=doc.splitTextToSize("• "+a,w);doc.text(l,x,yy);yy+=l.length*4.2;});return yy;};
+  const cw=(bw-8)/2;need(50);
+  let y1=sec("Aporte al equipo",Pm.team,M,y,cw),y2=sec("Ambiente ideal",Pm.env,M+cw+8,y,cw);y=Math.max(y1,y2)+4;need(40);
+  y1=sec("Bajo presión puede ser",Pm.press,M,y,cw);y2=sec("Aspectos a vigilar",Pm.lim,M+cw+8,y,cw);y=Math.max(y1,y2)+6;
+  need(20);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("Respuestas por bloque",M,y);y+=5;
+  doc.setFontSize(8);doc.setTextColor(...MU);doc.text("Bloque",M,y);doc.text("Más me identifica (4)",M+76,y);doc.text("Menos me identifica (1)",M+128,y);y+=2;doc.setDrawColor(...LN);doc.line(M,y,W-M,y);y+=4;
+  B.forEach(([q,o],b)=>{
+    const a=doc.splitTextToSize((b+1)+". "+q,72),c1=doc.splitTextToSize(o[order[b][0]]+" ("+F[order[b][0]]+")",48),c2=doc.splitTextToSize(o[order[b][3]]+" ("+F[order[b][3]]+")",46);
+    const h=Math.max(a.length,c1.length,c2.length)*3.6+1.6;need(h);
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(...TX);doc.text(a,M,y);doc.text(c1,M+76,y);doc.text(c2,M+128,y);y+=h;
+  });
+  y+=3;need(16);doc.setFontSize(7.5);doc.setTextColor(...MU);
+  L=doc.splitTextToSize("Cómo se calcula: cada bloque tiene una frase por factor; el puntaje de cada factor es la suma de los números asignados (4 = más me identifica, 1 = menos) en los 25 bloques. Autoevaluación orientativa para la reflexión en clase; no es un diagnóstico psicológico ni una prueba DISC certificada.",bw);
+  doc.text(L,M,y);
+  return doc.output("arraybuffer");
+}
+function slug(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,60)||"estudiante";}
+
+let downloads={save:async({filename,data})=>{
+  const blob=new Blob([data],{type:"application/pdf"});const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);return {status:"saved"};}};
+$("bPdf").onclick=async()=>{
+  if(!lastResult||!downloads)return;
+  if(!window.jspdf){$("pdfStatus").textContent="No se pudo cargar el generador de PDF. Recarga la página e inténtalo de nuevo.";return;}
+  $("bPdf").disabled=true;$("pdfStatus").textContent="Preparando el PDF…";
+  try{
+    await downloads.save({filename:"Perfil_DISC_"+slug(nombre)+".pdf",data:buildPdf(lastResult)});
+    $("pdfStatus").textContent="PDF descargado. Revisa tu carpeta de descargas.";
+  }catch(e){
+    const c=e&&e.code;
+    $("pdfStatus").textContent=c==="declined"?"Cancelaste la descarga. Puedes intentarlo de nuevo cuando quieras.":c==="rate_limited"?"Ya hay una descarga pendiente de confirmar.":"No se pudo descargar el archivo en esta vista.";
+  }finally{$("bPdf").disabled=!downloads;}
+};
+</script>
+
+</body>
+</html>
